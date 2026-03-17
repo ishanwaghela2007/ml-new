@@ -1,5 +1,9 @@
 
+<<<<<<< HEAD
 path: D:/Prathamesh Jadhav/final-year/data/dataset(tubes) 
+=======
+path: D:/final-year-main/final-year-main/data/dataset(tubes) 
+>>>>>>> 1a5e2cf (Initial commit or description of changes)
 train: images/train
 val: images
 
