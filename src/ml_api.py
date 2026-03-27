@@ -20,6 +20,22 @@ app.add_middleware(
 )
 
 DB_PATH = Path(__file__).resolve().parent.parent / "data/inspections.db"
+def init_db():
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS tube_detections (
+            tube_id TEXT PRIMARY KEY,
+            timestamp TEXT NOT NULL,
+            brand_name TEXT,
+            confidence REAL,
+            track_id INTEGER
+        )
+    """)
+    conn.commit()
+    conn.close()
+
+init_db()
 
 def get_stats():
     total_tubs = 0
