@@ -31,11 +31,11 @@ def get_stats():
             cursor = conn.cursor()
             
             # Get total
-            cursor.execute("SELECT COUNT(*) FROM inspections")
+            cursor.execute("SELECT COUNT(*) FROM tube_detections")
             total_tubs = cursor.fetchone()[0]
             
             # Get per-company counts
-            cursor.execute("SELECT brand_name, COUNT(*) FROM inspections GROUP BY brand_name")
+            cursor.execute("SELECT brand_name, COUNT(*) FROM tube_detections GROUP BY brand_name")
             rows = cursor.fetchall()
             for brand, count in rows:
                 company_counts[brand] = count
