@@ -8,7 +8,7 @@ import json
 
 app = FastAPI()
 
-# Optional: set PUBLISHED_URL or TUNNEL_URL to your localtunnel (or ngrok) URL for linking
+# Tunnel (optional)
 TUNNEL_URL = os.environ.get("PUBLISHED_URL") or os.environ.get("TUNNEL_URL", "")
 
 app.add_middleware(
@@ -19,7 +19,13 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-DB_PATH = Path(__file__).resolve().parent.parent / "data/inspections.db"
+# ✅ FIXED DB PATH (IMPORTANT)
+BASE_DIR = Path(__file__).resolve().parent.parent
+DB_PATH = BASE_DIR / "data" / "tube_detections.db"
+
+print("📦 Reading DB at:", DB_PATH)
+
+# ✅ CREATE TABLE IF NOT EXISTS
 def init_db():
     conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
@@ -41,30 +47,29 @@ def get_stats():
     total_tubs = 0
     company_counts = {}
     
-    if DB_PATH.exists():
-        try:
-            conn = sqlite3.connect(DB_PATH)
-            cursor = conn.cursor()
+    try:
+        conn = sqlite3.connect(DB_PATH)
+        cursor = conn.cursor()
+        
+        # ✅ CORRECT TABLE
+        cursor.execute("SELECT COUNT(*) FROM tube_detections")
+        total_tubs = cursor.fetchone()[0]
+        
+        cursor.execute("SELECT brand_name, COUNT(*) FROM tube_detections GROUP BY brand_name")
+        rows = cursor.fetchall()
+        
+        for brand, count in rows:
+            company_counts[brand] = count
             
-            # Get total
-            cursor.execute("SELECT COUNT(*) FROM tube_detections")
-            total_tubs = cursor.fetchone()[0]
-            
-            # Get per-company counts
-            cursor.execute("SELECT brand_name, COUNT(*) FROM tube_detections GROUP BY brand_name")
-            rows = cursor.fetchall()
-            for brand, count in rows:
-                company_counts[brand] = count
-                
-            conn.close()
-        except Exception as e:
-            print("DB read error:", e)
+        conn.close()
+    except Exception as e:
+        print("DB read error:", e)
             
     return {"total_tubs": total_tubs, "company_counts": company_counts}
 
+
 @app.get("/api/info")
 def api_info():
-    """Public URL and endpoints info (link API with tunnel)."""
     return {
         "local_url": "http://localhost:8001",
         "tunnel_url": TUNNEL_URL or None,
@@ -73,9 +78,13 @@ def api_info():
         "ws_stats": "ws://localhost:8001/ws/stats",
     }
 
+
 @app.get("/api/stats")
 def read_stats():
-    return get_stats()
+    stats = get_stats()
+    print("📊 Stats:", stats)
+    return stats
+
 
 @app.websocket("/ws/stats")
 async def websocket_endpoint(websocket: WebSocket):
@@ -84,13 +93,13 @@ async def websocket_endpoint(websocket: WebSocket):
     try:
         while True:
             stats = get_stats()
-            # Send an update if total items change or on initial connect
             if stats["total_tubs"] != last_count:
                 await websocket.send_text(json.dumps(stats))
                 last_count = stats["total_tubs"]
             await asyncio.sleep(1)
-    except Exception as e:
+    except:
         pass
+
 
 if __name__ == "__main__":
     import uvicorn
